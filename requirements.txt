@@ -1,5 +1,0 @@
-pdf2image
-langdetect
-iso639
-PyPDF2
--poppler-utils

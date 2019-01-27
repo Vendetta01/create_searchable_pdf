@@ -4,6 +4,7 @@ import sys
 import argparse
 import tempfile
 import pathlib
+import subprocess
 import pdf2image
 import pyocr
 import langdetect
@@ -12,7 +13,7 @@ import locale
 import PyPDF2 as pypdf
 
 
-__VERSION__="0.1alpha"
+__VERSION__="0.2alpha"
 TESS_DEF_LANG = 'eng'
 
 
@@ -49,6 +50,12 @@ def tesseract_language_installed(lang):
     """
     # TODO:
     # check if specified language is installed
+    results = subprocess.run(['tesseract', '--list-langs'],
+            stdout=subprocess.PIPE).stdout.decode('utf-8').split("\n")[1:-1]
+
+    if (lang not in results):
+        return False
+
     return True
 
 
@@ -71,7 +78,6 @@ def guess_language(ocr, image):
         if (not tesseract_language_installed(lang)):
             raise TesseractLanguageMissing(lang)
     except Exception as e:
-        print("__DEBUG2.5: exception: {}".format(e))
         lang = TESS_DEF_LANG
 
     return lang
@@ -80,7 +86,6 @@ def guess_language(ocr, image):
 def merge_output_pdfs(pdf_img, pdf_txts, pdf_out):
     """merge_output_pdfs()
     """
-    print("__DEBUG3: {}".format(pdf_img))
     pypdf_img = pypdf.PdfFileReader(pdf_img)
     out = pypdf.PdfFileWriter()
 
@@ -138,7 +143,6 @@ def create_pdf_from_ocr_images(fname, pdf_out, dpi):
         for i,image in enumerate(images):
             tmp_fname = pathlib.Path(tmpdir) / pathlib.Path("{:0>10d}".format(i))
             pdf_txts.append(tmp_fname.as_posix() + ".pdf")
-            print("__DEBUG1: {}".format(tmp_fname.as_posix()))
             ocr.image_to_pdf(image=image,
                     output_file=str(tmp_fname.as_posix()),
                     lang=lang, textonly=True)
