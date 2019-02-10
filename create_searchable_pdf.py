@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import argparse
 import tempfile
@@ -11,6 +12,8 @@ import langdetect
 import iso639
 import locale
 import PyPDF2 as pypdf
+import pdftotext
+from shutil import copyfile
 
 
 __VERSION__="0.2alpha"
@@ -152,6 +155,28 @@ def create_pdf_from_ocr_images(fname, pdf_out, dpi):
     return
 
 
+def delete_text_layer_from_pdf(fname):
+    """delete_text_layer_from_pdf()
+    """
+    # Create temp file name
+    f, pdf_tmp_name = tempfile.mkstemp()
+
+    # copy file to temp
+    copyfile(fname, pdf_tmp_name)
+
+    # Call ghostscript
+    try:
+        subprocess.run(['gs', '-o', fname, '-sDEVICE=pdfwrite',
+            '-dFILTERTEXT', pdf_tmp_name], check=True)
+    except:
+        os.remove(pdf_tmp_name)
+        raise
+
+    # delete temp file
+    os.remove(pdf_tmp_name)
+
+    return
+
 
 def main(argv):
     # fix for bug in tesseract: set LC_ALL to "C"
@@ -174,14 +199,27 @@ def main(argv):
     args = parser.parse_args()
 
     for fname in args.input_pdf:
-        # check file existence else skip
+        # check file existence and if text is available else skip
         try:
-            f = open(fname)
+            f = open(fname, "rb")
+            pdf = pdftotext.PDF(f)
+            pdf_has_text = False
+            if (len(pdf) > 0 and pdf[0]):
+                pdf_has_text = True
         except FileNotFoundError:
             print("Warning: File '{}' not found, skipping!".format(fname))
             continue
         else:
             f.close()
+
+        if (not args.force and pdf_has_text):
+            print("Warning: File '{}' contains text, skipping!".format(fname))
+            continue
+
+        if (args.force and pdf_has_text):
+            print("Warning: File '{}' contains text but --force is set, deleting old text layer".format(fname))
+            delete_text_layer_from_pdf(fname)
+
 
         pdf_out = fname
         if (not args.inplace):

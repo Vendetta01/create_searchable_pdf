@@ -1,0 +1,6 @@
+pdftotext=2.1.1
+PyPDF2=1.26.0
+pdf2image=1.4.1
+pyocr=0.5.3
+langdetect=1.0.7
+iso639=0.1.4
